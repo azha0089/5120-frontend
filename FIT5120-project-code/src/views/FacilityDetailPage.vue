@@ -23,11 +23,11 @@
           <div class="status-container">
             <h1 class="facility-name">{{ facility.name }}</h1>
             <el-tag 
-              :type="facility.businessStatus === 'OPERATIONAL' ? 'success' : 'danger'"
+              :type="facility.isOpen ? 'success' : 'danger'"
               class="status-badge"
               size="large"
             >
-              {{ getBusinessStatusText(facility.businessStatus) }}
+              {{ facility.isOpen ? 'Open' : 'Closed' }}
             </el-tag>
           </div>
           
@@ -190,7 +190,7 @@ const userLocationFound = ref(false)
 const getBusinessStatusText = (status) => {
   switch (status) {
     case 'OPERATIONAL':
-      return 'Open'
+      return 'Operational'
     case 'CLOSED_TEMPORARILY':
       return 'Temporarily Closed'
     case 'CLOSED_PERMANENTLY':
@@ -198,6 +198,19 @@ const getBusinessStatusText = (status) => {
     default:
       return 'Unknown Status'
   }
+}
+
+// Derive current open status from opening hours
+const getOpenStatus = (facility) => {
+  const regular = facility && facility.regularOpeningHours
+  if (regular && typeof regular.openNow === 'boolean') {
+    return regular.openNow
+  }
+  const current = facility && facility.currentOpeningHours
+  if (current && typeof current.openNow === 'boolean') {
+    return current.openNow
+  }
+  return false
 }
 
 const formatType = (type) => {
@@ -222,6 +235,8 @@ const loadFacilityDetail = async () => {
     await getUserLocation()
     const response = await facilityService.getFacilityDetail(id)
     facility.value = response.data
+    // attach computed open status
+    facility.value.isOpen = getOpenStatus(facility.value)
     
     if (facility.value.location) {
       setTimeout(() => {

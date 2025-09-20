@@ -35,7 +35,7 @@ const facilityService = {
       distance: filterParams.distance,
       minRating: filterParams.minRating,
       openNow: filterParams.openNow,
-      language: filterParams.language || ''  // Send language preference to backend
+      category: filterParams.category || ''  // Send category preference to backend
     }
 
     return api.get('/facilities/search', { params })

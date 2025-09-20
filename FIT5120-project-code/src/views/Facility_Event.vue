@@ -46,14 +46,17 @@
         <input type="checkbox" v-model="filters.openNow">
       </div>
 
-      <!-- Language filter -->
+      <!-- Category filter -->
       <div class="filter-group" v-if="activeTab === 'facilities'">
-        <label>Language</label>
-        <select v-model="filters.language">
-          <option value="">Any language</option>
-          <option value="chinese">Chinese</option>
-          <option value="vietnamese">Vietnamese</option>
-          <option value="indonesian">Indonesian</option>
+        <label>Category</label>
+        <select v-model="filters.category">
+          <option value="">Any category</option>
+          <option value="supermarket">Supermarket</option>
+          <option value="clinic">Clinic</option>
+          <option value="chinese_restaurant">Chinese restaurant</option>
+          <option value="vietnamese_restaurant">Vietnamese restaurant</option>
+          <option value="indonesian_restaurant">Indonesian restaurant</option>
+          <option value="shopping_mall">Shopping mall</option>
         </select>
       </div>
 
@@ -129,8 +132,21 @@ const filters = ref({
   distance: '5',
   minRating: '0',
   openNow: false,
-  language: ''  // Language filter (chinese/vietnamese)
+  category: ''
 })
+
+// Derive isOpen from opening hours data returned by backend
+const getOpenStatus = (facility) => {
+  const regular = facility && facility.regularOpeningHours
+  if (regular && typeof regular.openNow === 'boolean') {
+    return regular.openNow
+  }
+  const current = facility && facility.currentOpeningHours
+  if (current && typeof current.openNow === 'boolean') {
+    return current.openNow
+  }
+  return false
+}
 
 const toggleTab = () => {
   activeTab.value = activeTab.value === 'facilities' ? 'events' : 'facilities'
@@ -172,11 +188,16 @@ const loadData = async () => {
         distance: filters.value.distance,
         minRating: filters.value.minRating,
         openNow: filters.value.openNow,
-        language: filters.value.language   // Pass language filter to backend
+        category: filters.value.category   // Pass category filter to backend
       }
 
       const response = await facilityService.searchFacilitiesWithFilters(filterParams)
-      items.value = response.data
+      console.log("响应数据 is ",response.data)
+      items.value = (response.data || []).map(f => ({
+        ...f,
+        isOpen: getOpenStatus(f)
+      }))
+      console.log("响应数据 is  items is ",items.value)
     } else {
       const response = await eventService.getNearbyEvents(
         userLocation.value.lat,
@@ -185,6 +206,8 @@ const loadData = async () => {
         20
       )
       items.value = response.data
+
+
     }
 
     updateMapMarkers()
@@ -237,7 +260,7 @@ const resetFilters = () => {
     distance: '5',
     minRating: '0',
     openNow: false,
-    language: ''
+    category: ''
   }
   clearMarkers()
   loadData()

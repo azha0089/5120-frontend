@@ -90,19 +90,27 @@ public class FacilityServiceImpl implements FacilityService {
 
             org.springframework.http.HttpHeaders headers = buildHeaders();
 
-            // ✅ Handle language-specific searches
-            String language = queryParams.get("language");
-
-            if ("chinese".equalsIgnoreCase(language)) {
-                return searchByLanguage("Chinese near Melbourne", maxResults, headers, queryParams);
-            }
-
-            if ("vietnamese".equalsIgnoreCase(language)) {
-                return searchByLanguage("Vietnamese near Melbourne", maxResults, headers, queryParams);
-            }
-
-            if ("indonesian".equalsIgnoreCase(language)) {
-                return searchByLanguage("Indonesian near Melbourne", maxResults, headers, queryParams);
+            // ✅ Handle category-specific searches using text query + locationRestriction
+            String category = queryParams.get("category");
+            if (category != null && !category.isBlank()) {
+                String textQuery;
+                switch (category.toLowerCase()) {
+                    case "supermarket":
+                        textQuery = "supermarket near Melbourne"; break;
+                    case "clinic":
+                        textQuery = "clinic near Melbourne"; break;
+                    case "chinese_restaurant":
+                        textQuery = "chinese restaurant near Melbourne"; break;
+                    case "vietnamese_restaurant":
+                        textQuery = "vietnamese restaurant near Melbourne"; break;
+                    case "indonesian_restaurant":
+                        textQuery = "indonesian restaurant near Melbourne"; break;
+                    case "shopping_mall":
+                        textQuery = "shopping mall near Melbourne"; break;
+                    default:
+                        textQuery = category;
+                }
+                return searchByLanguage2(textQuery, maxResults, headers, queryParams);
             }
 
             // ✅ 默认走 searchNearby
@@ -154,7 +162,7 @@ public class FacilityServiceImpl implements FacilityService {
         requestBody.put("textQuery", restaurantType);  // 不再硬编码位置
         requestBody.put("maxResultCount", maxResults);
 
-        // 添加位置限制，使用用户的实际坐标
+        // 添加位置偏置，使用用户的实际坐标（Text Search 使用 locationBias）
         if (queryParams.containsKey("latitude") && queryParams.containsKey("longitude")) {
             double latitude = Double.parseDouble(queryParams.get("latitude"));
             double longitude = Double.parseDouble(queryParams.get("longitude"));
@@ -162,15 +170,15 @@ public class FacilityServiceImpl implements FacilityService {
                     Double.parseDouble(queryParams.get("distance")) : 5.0;
             double radiusInMeters = distanceInKm * 1000;
 
-            Map<String, Object> locationRestriction = new HashMap<>();
             Map<String, Object> circle = new HashMap<>();
             Map<String, Double> center = new HashMap<>();
             center.put("latitude", latitude);
             center.put("longitude", longitude);
             circle.put("center", center);
             circle.put("radius", radiusInMeters);
-            locationRestriction.put("circle", circle);
-            requestBody.put("locationRestriction", locationRestriction);
+            Map<String, Object> locationBias = new HashMap<>();
+            locationBias.put("circle", circle);
+            requestBody.put("locationBias", locationBias);
         }
 
         org.springframework.http.HttpEntity<Map<String, Object>> request =
@@ -232,31 +240,26 @@ public class FacilityServiceImpl implements FacilityService {
                         }
                     }
 
-                    // ✅ Handle language filtering
-                    String language = queryParams.get("language");
-
-                    if ("chinese".equalsIgnoreCase(language)) {
-                        if (facility.getTypes() == null ||
-                                facility.getTypes().stream().noneMatch(type -> type.equalsIgnoreCase("chinese_restaurant"))) {
-                            return false;
-                        }
-                    }
-
-                    if ("vietnamese".equalsIgnoreCase(language)) {
-                        if (facility.getTypes() == null ||
-                                facility.getTypes().stream().noneMatch(type ->
-                                    type.equalsIgnoreCase("vietnamese_restaurant") ||
-                                    type.equalsIgnoreCase("asian_restaurant"))) {
-                            return false;
-                        }
-                    }
-
-                    if ("indonesian".equalsIgnoreCase(language)) {
-                        if (facility.getTypes() == null ||
-                                facility.getTypes().stream().noneMatch(type ->
-                                    type.equalsIgnoreCase("indonesian_restaurant") ||
-                                    type.equalsIgnoreCase("asian_restaurant"))) {
-                            return false;
+                    // ✅ Category filtering on types if still using nearby
+                    String category = queryParams.get("category");
+                    if (category != null && !category.isBlank()) {
+                        List<String> types = facility.getTypes();
+                        if (types == null) return false;
+                        switch (category.toLowerCase()) {
+                            case "supermarket":
+                                return types.stream().anyMatch(t -> t.equalsIgnoreCase("supermarket") || t.equalsIgnoreCase("grocery_store"));
+                            case "clinic":
+                                return types.stream().anyMatch(t -> t.equalsIgnoreCase("clinic") || t.equalsIgnoreCase("doctor") || t.equalsIgnoreCase("medical_clinic"));
+                            case "chinese_restaurant":
+                                return types.stream().anyMatch(t -> t.equalsIgnoreCase("chinese_restaurant") || t.equalsIgnoreCase("restaurant") || t.equalsIgnoreCase("asian_restaurant"));
+                            case "vietnamese_restaurant":
+                                return types.stream().anyMatch(t -> t.equalsIgnoreCase("vietnamese_restaurant") || t.equalsIgnoreCase("restaurant") || t.equalsIgnoreCase("asian_restaurant"));
+                            case "indonesian_restaurant":
+                                return types.stream().anyMatch(t -> t.equalsIgnoreCase("indonesian_restaurant") || t.equalsIgnoreCase("restaurant") || t.equalsIgnoreCase("asian_restaurant"));
+                            case "shopping_mall":
+                                return types.stream().anyMatch(t -> t.equalsIgnoreCase("shopping_mall"));
+                            default:
+                                return types.stream().anyMatch(t -> t.equalsIgnoreCase(category));
                         }
                     }
 

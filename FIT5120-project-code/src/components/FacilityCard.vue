@@ -29,7 +29,7 @@ const props = defineProps({
       id: '',
       name: '',
       type: '',
-      isOpen: false,
+      isOpen: true,
       distance: 0,
       rating: 0,
       reviewCount: 0,
@@ -188,15 +188,15 @@ const props = defineProps({
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .card-info p {
     width: 100%;
   }
-  
+
   .card-title {
     font-size: 1.2rem;
   }
-  
+
   .card-image {
     height: 180px;
   }

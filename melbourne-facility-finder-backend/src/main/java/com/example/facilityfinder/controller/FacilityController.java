@@ -73,7 +73,7 @@ public class FacilityController {
             @RequestParam(defaultValue = "false") String openNow,
             @RequestParam(defaultValue = "1") String page,
             @RequestParam(defaultValue = "20") String limit,
-            @RequestParam(defaultValue = "") String language
+            @RequestParam(defaultValue = "") String category
     ) {
         try {
             System.out.println("🔍 Controller: 接收到筛选请求");
@@ -81,7 +81,7 @@ public class FacilityController {
             System.out.println("  - 距离: " + distance + "km");
             System.out.println("  - 最低评分: " + minRating + "星");
             System.out.println("  - 仅营业中: " + openNow);
-            System.out.println("  - 语言: " + (language.isEmpty() ? "任何语言" : language));
+            System.out.println("  - 类别: " + (category.isEmpty() ? "任意" : category));
             System.out.println("  - 分页: page=" + page + ", limit=" + limit);
 
             if (latitude < -90 || latitude > 90) {
@@ -99,7 +99,7 @@ public class FacilityController {
             queryParams.put("openNow", openNow);
             queryParams.put("page", page);
             queryParams.put("limit", limit);
-            queryParams.put("language", language);
+            queryParams.put("category", category);
 
             List<FacilityDTO> facilities = facilityService.searchFacilities(queryParams);
 
